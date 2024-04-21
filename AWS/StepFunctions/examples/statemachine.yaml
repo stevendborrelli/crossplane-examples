@@ -1,0 +1,28 @@
+apiVersion: sfn.aws.example.com/v1alpha1
+kind: XStateMachine
+metadata:
+  name: statemachine
+spec:
+  providerConfigName: default
+  region: us-west-1
+  cloudWatchLogParameters:
+    retentionInDays: 3
+    logLevel: FATAL
+  stateMachineParameters:
+    definition: |
+      {
+        "Comment": "A Hello World example of the Amazon States Language using Pass states",
+        "StartAt": "Hello",
+        "States": {
+          "Hello": {
+            "Type": "Pass",
+            "Result": "Hello",
+            "Next": "World"
+          },
+          "World": {
+            "Type": "Pass",
+            "Result": "World",
+            "End": true
+          }
+        }
+      }

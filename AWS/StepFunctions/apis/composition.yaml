@@ -1,0 +1,116 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xstatemachine.sfnaws.example.com
+spec:
+  writeConnectionSecretsToNamespace: upbound-system
+  compositeTypeRef:
+    apiVersion: sfn.aws.example.com/v1alpha1
+    kind: XStateMachine
+  mode: Pipeline
+  pipeline:
+    - step: go-templating
+      functionRef:
+        name: crossplane-contrib-function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $roleArn :="" }}
+            {{- $logGroupArn := (dig "resources" "cloudwatch-log-group" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            {{- if $.observed.composite.resource.spec.stateMachineParameters.roleArn }}
+            {{- $roleArn = $.observed.composite.resource.spec.stateMachineParameters.roleArn }}
+            {{- else }}
+            {{- $roleArn = (dig "resources" "statemachine-role" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            ---
+            apiVersion: iam.aws.upbound.io/v1beta1
+            kind: Role
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: statemachine-role
+            spec:
+              providerConfigRef:
+                name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
+              forProvider:
+                assumeRolePolicy: |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Principal": {
+                          "Service": "states.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                      }
+                    ]
+                  }
+                inlinePolicy: 
+                - name: "sfn-cloudwatchlogs"
+                  policy: |
+                    {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogDelivery",
+                                "logs:GetLogDelivery",
+                            "logs:UpdateLogDelivery",
+                            "logs:DeleteLogDelivery",
+                            "logs:ListLogDeliveries",
+                            "logs:PutResourcePolicy",
+                            "logs:DescribeResourcePolicies",
+                              "logs:DescribeLogGroups"
+                          ],
+                          "Resource": "*"
+                        }
+                      ]
+                    }
+            {{ end }}
+            ---
+            apiVersion: cloudwatchlogs.aws.upbound.io/v1beta1
+            kind: Group
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: cloudwatch-log-group
+            spec:
+              providerConfigRef:
+                name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
+              forProvider:
+                region: {{ $.observed.composite.resource.spec.region }}
+                retentionInDays: {{ $.observed.composite.resource.spec.cloudWatchLogParameters.retentionInDays | int }}
+            {{ if and $logGroupArn $roleArn }}
+            ---
+            apiVersion: sfn.aws.upbound.io/v1beta1
+            kind: StateMachine
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: state-machine
+            spec:
+              providerConfigRef:
+                name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
+              forProvider:
+                region: {{ $.observed.composite.resource.spec.region }}
+                loggingConfiguration:
+                - includeExecutionData: {{ default false $.observed.composite.resource.spec.cloudWatchLogParameters.includeExecutionData }}
+                  level: {{ default "ERROR" $.observed.composite.resource.spec.cloudWatchLogParameters.logLevel }}
+                  logDestination: "{{ $logGroupArn }}:*"
+                definition: {{ $.observed.composite.resource.spec.stateMachineParameters.definition | toJson }}
+                roleArn: {{ $roleArn }}
+                type: EXPRESS # required for logging
+            {{ end }}
+            ---
+            apiVersion: {{ $.observed.composite.resource.apiVersion }}
+            kind: {{ $.observed.composite.resource.kind }}
+            # {{ if $logGroupArn }}
+            # status:
+            #   arn: {{ $logGroupArn }}
+            # {{ else }}
+            # status: {}
+            # {{end }}
+    - step: automatically-detect-ready-composed-resources
+      functionRef:
+        name: crossplane-contrib-function-auto-ready

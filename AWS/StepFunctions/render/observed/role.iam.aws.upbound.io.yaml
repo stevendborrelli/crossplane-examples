@@ -1,0 +1,103 @@
+apiVersion: iam.aws.upbound.io/v1beta1
+kind: Role
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: statemachine-role
+    crossplane.io/external-create-pending: "2024-04-21T15:45:42Z"
+    crossplane.io/external-create-succeeded: "2024-04-21T15:45:42Z"
+    crossplane.io/external-name: hello-world-vr4n5
+  creationTimestamp: "2024-04-21T15:45:41Z"
+  finalizers:
+  - finalizer.managedresource.crossplane.io
+  generateName: hello-world-
+  generation: 3
+  labels:
+    crossplane.io/claim-name: ""
+    crossplane.io/claim-namespace: ""
+    crossplane.io/composite: hello-world
+  name: hello-world-vr4n5
+  ownerReferences:
+  - apiVersion: sfn.aws.example.com/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XStateMachine
+    name: hello-world
+    uid: d869e3ba-ff10-4ca0-88e1-fbe0ade15e24
+  resourceVersion: "793056"
+  uid: c71d05f3-3985-4e39-bb4b-f733ed738d2c
+spec:
+  deletionPolicy: Delete
+  forProvider:
+    assumeRolePolicy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "states.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+    inlinePolicy:
+    - name: sfn-cloudwatchlogs
+      policy: "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\":
+        \"Allow\",\n      \"Action\": [\n        \"logs:CreateLogDelivery\",\n            \"logs:GetLogDelivery\",\n
+        \       \"logs:UpdateLogDelivery\",\n        \"logs:DeleteLogDelivery\",\n
+        \       \"logs:ListLogDeliveries\",\n        \"logs:PutResourcePolicy\",\n
+        \       \"logs:DescribeResourcePolicies\",\n          \"logs:DescribeLogGroups\"\n
+        \     ],\n      \"Resource\": \"*\"\n    }\n  ]\n} \n"
+    maxSessionDuration: 3600
+    path: /
+    tags:
+      crossplane-kind: role.iam.aws.upbound.io
+      crossplane-name: hello-world-vr4n5
+      crossplane-providerconfig: default
+  initProvider: {}
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    name: default
+status:
+  atProvider:
+    arn: arn:aws:iam::1234567890:role/hello-world-vr4n5
+    assumeRolePolicy: '{"Statement":[{"Action":"sts:AssumeRole","Effect":"Allow","Principal":{"Service":"states.amazonaws.com"}}],"Version":"2012-10-17"}'
+    createDate: "2024-04-21T15:45:42Z"
+    description: ""
+    forceDetachPolicies: false
+    id: hello-world-vr4n5
+    inlinePolicy:
+    - name: sfn-cloudwatchlogs
+      policy: "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\":
+        \"Allow\",\n      \"Action\": [\n        \"logs:CreateLogDelivery\",\n            \"logs:GetLogDelivery\",\n
+        \       \"logs:UpdateLogDelivery\",\n        \"logs:DeleteLogDelivery\",\n
+        \       \"logs:ListLogDeliveries\",\n        \"logs:PutResourcePolicy\",\n
+        \       \"logs:DescribeResourcePolicies\",\n          \"logs:DescribeLogGroups\"\n
+        \     ],\n      \"Resource\": \"*\"\n    }\n  ]\n} \n"
+    maxSessionDuration: 3600
+    path: /
+    permissionsBoundary: ""
+    tags:
+      crossplane-kind: role.iam.aws.upbound.io
+      crossplane-name: hello-world-vr4n5
+      crossplane-providerconfig: default
+    tagsAll:
+      crossplane-kind: role.iam.aws.upbound.io
+      crossplane-name: hello-world-vr4n5
+      crossplane-providerconfig: default
+    uniqueId: AROAY4AFTTSE3NATDQ2WC
+  conditions:
+  - lastTransitionTime: "2024-04-21T15:45:44Z"
+    reason: Available
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2024-04-21T15:45:42Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-04-21T15:45:42Z"
+    reason: Success
+    status: "True"
+    type: LastAsyncOperation
