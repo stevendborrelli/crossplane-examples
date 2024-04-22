@@ -11,6 +11,7 @@ spec:
   stateMachineParameters:
     # if a Role ARN is not supplied, the Composition will create one for you
     # roleArn: <your arn>
+    tracingEnabled: true
     definition: |
       {
         "Comment": "A Hello World example demonstrating various state types of the Amazon States Language. It is composed of flow control states only, so it does not need resources to run.",

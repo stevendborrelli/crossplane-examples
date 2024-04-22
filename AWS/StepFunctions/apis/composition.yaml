@@ -18,8 +18,9 @@ spec:
         source: Inline
         inline:
           template: |
-            {{- $roleArn :="" }}
             {{- $logGroupArn := (dig "resources" "cloudwatch-log-group" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            {{- $stateMachineArn := (dig "resources" "state-machine" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            {{- $roleArn :="" }}
             {{- if $.observed.composite.resource.spec.stateMachineParameters.roleArn }}
             {{- $roleArn = $.observed.composite.resource.spec.stateMachineParameters.roleArn }}
             {{- else }}
@@ -31,6 +32,7 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: statemachine-role
             spec:
+              deletionPolicy: {{ default "Delete" $.observed.composite.resource.spec.deletionPolicy }}
               providerConfigRef:
                 name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
               forProvider:
@@ -66,7 +68,20 @@ spec:
                               "logs:DescribeLogGroups"
                           ],
                           "Resource": "*"
+                        }{{- if $.observed.composite.resource.spec.stateMachineParameters.tracingEnabled -}},
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                              "xray:PutTraceSegments",
+                              "xray:PutTelemetryRecords",
+                              "xray:GetSamplingRules",
+                              "xray:GetSamplingTargets"
+                          ],
+                          "Resource": [
+                              "*"
+                          ]
                         }
+                        {{- end -}}
                       ]
                     }
             {{ end }}
@@ -77,6 +92,7 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: cloudwatch-log-group
             spec:
+              deletionPolicy: {{ default "Delete" $.observed.composite.resource.spec.deletionPolicy }}
               providerConfigRef:
                 name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
               forProvider:
@@ -90,9 +106,11 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: state-machine
             spec:
+              deletionPolicy: {{ default "Delete" $.observed.composite.resource.spec.deletionPolicy }}
               providerConfigRef:
                 name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
               forProvider:
+                publish: {{ default false $.observed.composite.resource.spec.stateMachineParameters.publish }}
                 region: {{ $.observed.composite.resource.spec.region }}
                 loggingConfiguration:
                 - includeExecutionData: {{ default false $.observed.composite.resource.spec.cloudWatchLogParameters.includeExecutionData }}
@@ -100,17 +118,23 @@ spec:
                   logDestination: "{{ $logGroupArn }}:*"
                 definition: {{ $.observed.composite.resource.spec.stateMachineParameters.definition | toJson }}
                 roleArn: {{ $roleArn }}
+                tracingConfiguration:
+                - enabled: {{ default false $.observed.composite.resource.spec.stateMachineParameters.tracingEnabled }}
                 type: EXPRESS # required for logging
             {{ end }}
             ---
             apiVersion: {{ $.observed.composite.resource.apiVersion }}
             kind: {{ $.observed.composite.resource.kind }}
-            # {{ if $logGroupArn }}
-            # status:
-            #   arn: {{ $logGroupArn }}
-            # {{ else }}
-            # status: {}
-            # {{end }}
+            status:
+            {{ if $logGroupArn }}
+              cloudWatchLogGroupArn: {{ $logGroupArn }}
+            {{ end }}
+            {{ if $roleArn }}
+              iamRoleArn: {{ $roleArn }}
+            {{ end }}
+            {{ if $stateMachineArn }}
+              stateMachineArn: {{ $stateMachineArn }}
+            {{ end }}
     - step: automatically-detect-ready-composed-resources
       functionRef:
         name: crossplane-contrib-function-auto-ready
