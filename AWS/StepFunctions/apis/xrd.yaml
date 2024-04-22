@@ -131,5 +131,10 @@ spec:
               stateMachineArn:
                 description: The ARN of the state machine.
                 type: string
+              stateMachineStatus:
+                description: Freeform field containing information about the observed
+                  status.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
             type: object
     served: true
