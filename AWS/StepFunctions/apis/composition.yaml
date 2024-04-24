@@ -135,11 +135,12 @@ spec:
             {{ if $stateMachineArn }}
               stateMachineArn: {{ $stateMachineArn }}
             {{ end }}
-            {{ $stateMachineStatus := (dig "resources" "state-machine" "resource" "status" "atProvider" "" $.observed) }}
-            {{ if $stateMachineStatus }}
-              stateMachineStatus:
-               {{ $stateMachineStatus  | toYaml | nindent 6 }}
-            {{ end }}
+              # Status for each resource
+              resourceStatus:
+              {{ range $key, $resource := $.observed.resources }}
+                {{ $key }}:
+                  {{ (getResourceCondition "Ready" $resource) | toYaml | nindent 6 }}
+              {{ end }}
     - step: automatically-detect-ready-composed-resources
       functionRef:
         name: crossplane-contrib-function-auto-ready

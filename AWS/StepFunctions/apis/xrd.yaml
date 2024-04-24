@@ -122,6 +122,10 @@ spec:
           status:
             description: Status defines the observed state of StateMachine.
             properties:
+              resourceStatus:
+                description: Generic Status for all Managed Resources
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               cloudWatchLogGroupArn: 
                 description: The ARN of the CloudWatch Log Group
                 type: string
