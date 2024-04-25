@@ -17,7 +17,140 @@ spec:
         kind: GoTemplate
         source: Inline
         inline:
-          template: "{{- $spec := $.observed.composite.resource.spec }}\n\n{{- $logGroupArn := (dig \"resources\" \"cloudwatch-log-group\" \"resource\" \"status\" \"atProvider\" \"arn\" \"\" $.observed ) }}\n{{- $stateMachineArn := (dig \"resources\" \"state-machine\" \"resource\" \"status\" \"atProvider\" \"arn\" \"\" $.observed ) }}\n\n# if user doesn't specify a role, create one\n{{- $roleArn :=\"\" }}\n{{- if $spec.stateMachineParameters.roleArn }}\n{{- $roleArn = $spec.stateMachineParameters.roleArn }}\n{{- else }}\n{{- $roleArn = (dig \"resources\" \"statemachine-role\" \"resource\" \"status\" \"atProvider\" \"arn\" \"\" $.observed ) }}\n---\napiVersion: iam.aws.upbound.io/v1beta1\nkind: Role\nmetadata:\n  labels:\n  {{ $spec.commonLabels | toYaml | nindent 4 }}\n  annotations:\n    gotemplating.fn.crossplane.io/composition-resource-name: statemachine-role\nspec:\n  deletionPolicy: {{ default \"Delete\" $spec.deletionPolicy }}\n  providerConfigRef:\n    name: {{ default \"default\" $spec.providerConfigName }}\n  forProvider:\n    assumeRolePolicy: |\n      {\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [\n          {\n            \"Effect\": \"Allow\",\n            \"Principal\": {\n              \"Service\": \"states.amazonaws.com\"\n            },\n            \"Action\": \"sts:AssumeRole\"\n          }\n        ]\n      }\n    inlinePolicy: \n    - name: \"sfn-cloudwatchlogs\"\n      policy: |\n        {\n          \"Version\": \"2012-10-17\",\n          \"Statement\": [\n            {\n              \"Effect\": \"Allow\",\n              \"Action\": [\n                \"logs:CreateLogDelivery\",\n                    \"logs:GetLogDelivery\",\n                \"logs:UpdateLogDelivery\",\n                \"logs:DeleteLogDelivery\",\n                \"logs:ListLogDeliveries\",\n                \"logs:PutResourcePolicy\",\n                \"logs:DescribeResourcePolicies\",\n                  \"logs:DescribeLogGroups\"\n              ],\n              \"Resource\": \"*\"\n            }{{- if $spec.stateMachineParameters.tracingEnabled -}},\n            {\n              \"Effect\": \"Allow\",\n              \"Action\": [\n                  \"xray:PutTraceSegments\",\n                  \"xray:PutTelemetryRecords\",\n                  \"xray:GetSamplingRules\",\n                  \"xray:GetSamplingTargets\"\n              ],\n              \"Resource\": [\n                  \"*\"\n              ]\n            }\n            {{- end -}}\n          ]\n        }\n{{ end }}\n    tags:\n      {{ $spec.tags | toYaml | nindent 6 }}\n---\napiVersion: cloudwatchlogs.aws.upbound.io/v1beta1\nkind: Group\nmetadata:\n  labels:\n    {{ $spec.commonLabels | toYaml | nindent 4 }}\n  annotations:\n    gotemplating.fn.crossplane.io/composition-resource-name: cloudwatch-log-group\nspec:\n  deletionPolicy: {{ default \"Delete\" $spec.deletionPolicy }}\n  providerConfigRef:\n    name: {{ default \"default\" $spec.providerConfigName }}\n  forProvider:\n    region: {{ $spec.region }}\n    retentionInDays: {{ $spec.cloudWatchLogParameters.retentionInDays | int }}\n    tags:\n      {{ $spec.tags | toYaml | nindent 6 }}\n{{ if and $logGroupArn $roleArn }}\n---\napiVersion: sfn.aws.upbound.io/v1beta1\nkind: StateMachine\nmetadata:\n  labels:\n    {{ $spec.commonLabels | toYaml | nindent 4 }}\n  annotations:\n    gotemplating.fn.crossplane.io/composition-resource-name: state-machine\nspec:\n  deletionPolicy: {{ default \"Delete\" $spec.deletionPolicy }}\n  providerConfigRef:\n    name: {{ default \"default\" $spec.providerConfigName }}\n  forProvider:\n    publish: {{ default false $spec.stateMachineParameters.publish }}\n    region: {{ $spec.region }}\n    loggingConfiguration:\n    - includeExecutionData: {{ default false $spec.cloudWatchLogParameters.includeExecutionData }}\n      level: {{ default \"ERROR\" $spec.cloudWatchLogParameters.logLevel }}\n      logDestination: \"{{ $logGroupArn }}:*\"\n    definition: {{ $spec.stateMachineParameters.definition | toJson }}\n    roleArn: {{ $roleArn }}\n    tags:\n      {{ $spec.tags | toYaml | nindent 6 }}\n    tracingConfiguration:\n    - enabled: {{ default false $spec.stateMachineParameters.tracingEnabled }}\n    type: EXPRESS # required for logging\n{{ end }}\n---\napiVersion: {{ $.observed.composite.resource.apiVersion }}\nkind: {{ $.observed.composite.resource.kind }}\nstatus:\n{{ if $logGroupArn }}\n  cloudWatchLogGroupArn: {{ $logGroupArn }}\n{{ end }}\n{{ if $roleArn }}\n  iamRoleArn: {{ $roleArn }}\n{{ end }}\n{{ if $stateMachineArn }}\n  stateMachineArn: {{ $stateMachineArn }}\n{{ end }}\n  # Status for each resource\n  resourceStatus:\n  {{ range $key, $resource := $.observed.resources }}\n    {{ $key }}:\n      {{ (getResourceCondition \"Ready\" $resource) | toYaml | nindent 6 }}\n  {{ end }}\n"
+          template: |
+            {{- $spec := $.observed.composite.resource.spec }}
+
+            {{- $logGroupArn := (dig "resources" "cloudwatch-log-group" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            {{- $stateMachineArn := (dig "resources" "state-machine" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            
+            # if user doesn't specify a role, create one
+            {{- $roleArn :="" }}
+            {{- if $spec.stateMachineParameters.roleArn }}
+            {{- $roleArn = $spec.stateMachineParameters.roleArn }}
+            {{- else }}
+            {{- $roleArn = (dig "resources" "statemachine-role" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            ---
+            apiVersion: iam.aws.upbound.io/v1beta1
+            kind: Role
+            metadata:
+              labels:
+              {{ $spec.commonLabels | toYaml | nindent 4 }}
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: statemachine-role
+            spec:
+              deletionPolicy: {{ default "Delete" $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ default "default" $spec.providerConfigName }}
+              forProvider:
+                assumeRolePolicy: |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Principal": {
+                          "Service": "states.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                      }
+                    ]
+                  }
+                inlinePolicy: 
+                - name: "sfn-cloudwatchlogs"
+                  policy: |
+                    {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogDelivery",
+                                "logs:GetLogDelivery",
+                            "logs:UpdateLogDelivery",
+                            "logs:DeleteLogDelivery",
+                            "logs:ListLogDeliveries",
+                            "logs:PutResourcePolicy",
+                            "logs:DescribeResourcePolicies",
+                              "logs:DescribeLogGroups"
+                          ],
+                          "Resource": "*"
+                        }{{- if $spec.stateMachineParameters.tracingEnabled -}},
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                              "xray:PutTraceSegments",
+                              "xray:PutTelemetryRecords",
+                              "xray:GetSamplingRules",
+                              "xray:GetSamplingTargets"
+                          ],
+                          "Resource": [
+                              "*"
+                          ]
+                        }
+                        {{- end -}}
+                      ]
+                    }
+            {{ end }}
+                tags:
+                  {{ $spec.tags | toYaml | nindent 6 }}
+            ---
+            apiVersion: cloudwatchlogs.aws.upbound.io/v1beta1
+            kind: Group
+            metadata:
+              labels:
+                {{ $spec.commonLabels | toYaml | nindent 4 }}
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: cloudwatch-log-group
+            spec:
+              deletionPolicy: {{ default "Delete" $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ default "default" $spec.providerConfigName }}
+              forProvider:
+                region: {{ $spec.region }}
+                retentionInDays: {{ $spec.cloudWatchLogParameters.retentionInDays | int }}
+                tags:
+                  {{ $spec.tags | toYaml | nindent 6 }}
+            {{ if and $logGroupArn $roleArn }}
+            ---
+            apiVersion: sfn.aws.upbound.io/v1beta1
+            kind: StateMachine
+            metadata:
+              labels:
+                {{ $spec.commonLabels | toYaml | nindent 4 }}
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: state-machine
+            spec:
+              deletionPolicy: {{ default "Delete" $spec.deletionPolicy }}
+              providerConfigRef:
+                name: {{ default "default" $spec.providerConfigName }}
+              forProvider:
+                publish: {{ default false $spec.stateMachineParameters.publish }}
+                region: {{ $spec.region }}
+                loggingConfiguration:
+                - includeExecutionData: {{ default false $spec.cloudWatchLogParameters.includeExecutionData }}
+                  level: {{ default "ERROR" $spec.cloudWatchLogParameters.logLevel }}
+                  logDestination: "{{ $logGroupArn }}:*"
+                definition: {{ $spec.stateMachineParameters.definition | toJson }}
+                roleArn: {{ $roleArn }}
+                tags:
+                  {{ $spec.tags | toYaml | nindent 6 }}
+                tracingConfiguration:
+                - enabled: {{ default false $spec.stateMachineParameters.tracingEnabled }}
+                type: EXPRESS # required for logging
+            {{ end }}
+            ---
+            apiVersion: {{ $.observed.composite.resource.apiVersion }}
+            kind: {{ $.observed.composite.resource.kind }}
+            status:
+            {{ if $logGroupArn }}
+              cloudWatchLogGroupArn: {{ $logGroupArn }}
+            {{ end }}
+            {{ if $roleArn }}
+              iamRoleArn: {{ $roleArn }}
+            {{ end }}
+            {{ if $stateMachineArn }}
+              stateMachineArn: {{ $stateMachineArn }}
+            {{ end }}
     - step: automatically-detect-ready-composed-resources
       functionRef:
         name: crossplane-contrib-function-auto-ready
