@@ -1,27 +1,94 @@
 apiVersion: sfn.aws.example.com/v1alpha1
 kind: XStateMachine
 metadata:
-  name: statemachine
+  name: hello-world
 spec:
   providerConfigName: default
   region: us-west-1
+  commonLabels:
+    app.example.com/usage: dev
+    app.example.com/costCenter: "12345"
+  tags:
+    kind: crossplane-example
+    env: dev
   cloudWatchLogParameters:
-    retentionInDays: 3
-    logLevel: FATAL
+    retentionInDays: 7
+    logLevel: ERROR
   stateMachineParameters:
+    # if a Role ARN is not supplied, the Composition will create one for you
+    # roleArn: <your arn>
+    tracingEnabled: true
     definition: |
       {
-        "Comment": "A Hello World example of the Amazon States Language using Pass states",
-        "StartAt": "Hello",
+        "Comment": "A Hello World example demonstrating various state types of the Amazon States Language. It is composed of flow control states only, so it does not need resources to run.",
+        "StartAt": "Pass",
         "States": {
-          "Hello": {
+          "Pass": {
+            "Comment": "A Pass state passes its input to its output, without performing work. They can also generate static JSON output, or transform JSON input using filters and pass the transformed data to the next state. Pass states are useful when constructing and debugging state machines.",
             "Type": "Pass",
-            "Result": "Hello",
-            "Next": "World"
+            "Result": {
+              "IsHelloWorldExample": true
+            },
+            "Next": "Hello World example?"
           },
-          "World": {
+          "Hello World example?": {
+            "Comment": "A Choice state adds branching logic to a state machine. Choice rules can implement many different comparison operators, and rules can be combined using And, Or, and Not",
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.IsHelloWorldExample",
+                "BooleanEquals": true,
+                "Next": "Yes"
+              },
+              {
+                "Variable": "$.IsHelloWorldExample",
+                "BooleanEquals": false,
+                "Next": "No"
+              }
+            ],
+            "Default": "Yes"
+          },
+          "Yes": {
             "Type": "Pass",
-            "Result": "World",
+            "Next": "Wait 3 sec"
+          },
+          "No": {
+            "Type": "Fail",
+            "Cause": "Not Hello World"
+          },
+          "Wait 3 sec": {
+            "Comment": "A Wait state delays the state machine from continuing for a specified time.",
+            "Type": "Wait",
+            "Seconds": 3,
+            "Next": "Parallel State"
+          },
+          "Parallel State": {
+            "Comment": "A Parallel state can be used to create parallel branches of execution in your state machine.",
+            "Type": "Parallel",
+            "Next": "Hello World",
+            "Branches": [
+              {
+                "StartAt": "Hello",
+                "States": {
+                  "Hello": {
+                    "Type": "Pass",
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "World",
+                "States": {
+                  "World": {
+                    "Type": "Pass",
+                    "End": true
+                  }
+                }
+              }
+            ]
+          },
+          "Hello World": {
+            "Type": "Pass",
             "End": true
           }
         }

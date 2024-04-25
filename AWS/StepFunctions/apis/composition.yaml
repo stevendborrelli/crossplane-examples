@@ -18,23 +18,29 @@ spec:
         source: Inline
         inline:
           template: |
+            {{- $spec := $.observed.composite.resource.spec }}
+
             {{- $logGroupArn := (dig "resources" "cloudwatch-log-group" "resource" "status" "atProvider" "arn" "" $.observed ) }}
             {{- $stateMachineArn := (dig "resources" "state-machine" "resource" "status" "atProvider" "arn" "" $.observed ) }}
+            
+            # if user doesn't specify a role, create one
             {{- $roleArn :="" }}
-            {{- if $.observed.composite.resource.spec.stateMachineParameters.roleArn }}
-            {{- $roleArn = $.observed.composite.resource.spec.stateMachineParameters.roleArn }}
+            {{- if $spec.stateMachineParameters.roleArn }}
+            {{- $roleArn = $spec.stateMachineParameters.roleArn }}
             {{- else }}
             {{- $roleArn = (dig "resources" "statemachine-role" "resource" "status" "atProvider" "arn" "" $.observed ) }}
             ---
             apiVersion: iam.aws.upbound.io/v1beta1
             kind: Role
             metadata:
+              labels:
+              {{ $spec.commonLabels | toYaml | nindent 4 }}
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: statemachine-role
             spec:
-              deletionPolicy: {{ default "Delete" $.observed.composite.resource.spec.deletionPolicy }}
+              deletionPolicy: {{ default "Delete" $spec.deletionPolicy }}
               providerConfigRef:
-                name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
+                name: {{ default "default" $spec.providerConfigName }}
               forProvider:
                 assumeRolePolicy: |
                   {
@@ -68,7 +74,7 @@ spec:
                               "logs:DescribeLogGroups"
                           ],
                           "Resource": "*"
-                        }{{- if $.observed.composite.resource.spec.stateMachineParameters.tracingEnabled -}},
+                        }{{- if $spec.stateMachineParameters.tracingEnabled -}},
                         {
                           "Effect": "Allow",
                           "Action": [
@@ -85,41 +91,51 @@ spec:
                       ]
                     }
             {{ end }}
+                tags:
+                  {{ $spec.tags | toYaml | nindent 6 }}
             ---
             apiVersion: cloudwatchlogs.aws.upbound.io/v1beta1
             kind: Group
             metadata:
+              labels:
+                {{ $spec.commonLabels | toYaml | nindent 4 }}
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: cloudwatch-log-group
             spec:
-              deletionPolicy: {{ default "Delete" $.observed.composite.resource.spec.deletionPolicy }}
+              deletionPolicy: {{ default "Delete" $spec.deletionPolicy }}
               providerConfigRef:
-                name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
+                name: {{ default "default" $spec.providerConfigName }}
               forProvider:
-                region: {{ $.observed.composite.resource.spec.region }}
-                retentionInDays: {{ $.observed.composite.resource.spec.cloudWatchLogParameters.retentionInDays | int }}
+                region: {{ $spec.region }}
+                retentionInDays: {{ $spec.cloudWatchLogParameters.retentionInDays | int }}
+                tags:
+                  {{ $spec.tags | toYaml | nindent 6 }}
             {{ if and $logGroupArn $roleArn }}
             ---
             apiVersion: sfn.aws.upbound.io/v1beta1
             kind: StateMachine
             metadata:
+              labels:
+                {{ $spec.commonLabels | toYaml | nindent 4 }}
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: state-machine
             spec:
-              deletionPolicy: {{ default "Delete" $.observed.composite.resource.spec.deletionPolicy }}
+              deletionPolicy: {{ default "Delete" $spec.deletionPolicy }}
               providerConfigRef:
-                name: {{ default "default" $.observed.composite.resource.spec.providerConfigName }}
+                name: {{ default "default" $spec.providerConfigName }}
               forProvider:
-                publish: {{ default false $.observed.composite.resource.spec.stateMachineParameters.publish }}
-                region: {{ $.observed.composite.resource.spec.region }}
+                publish: {{ default false $spec.stateMachineParameters.publish }}
+                region: {{ $spec.region }}
                 loggingConfiguration:
-                - includeExecutionData: {{ default false $.observed.composite.resource.spec.cloudWatchLogParameters.includeExecutionData }}
-                  level: {{ default "ERROR" $.observed.composite.resource.spec.cloudWatchLogParameters.logLevel }}
+                - includeExecutionData: {{ default false $spec.cloudWatchLogParameters.includeExecutionData }}
+                  level: {{ default "ERROR" $spec.cloudWatchLogParameters.logLevel }}
                   logDestination: "{{ $logGroupArn }}:*"
-                definition: {{ $.observed.composite.resource.spec.stateMachineParameters.definition | toJson }}
+                definition: {{ $spec.stateMachineParameters.definition | toJson }}
                 roleArn: {{ $roleArn }}
+                tags:
+                  {{ $spec.tags | toYaml | nindent 6 }}
                 tracingConfiguration:
-                - enabled: {{ default false $.observed.composite.resource.spec.stateMachineParameters.tracingEnabled }}
+                - enabled: {{ default false $spec.stateMachineParameters.tracingEnabled }}
                 type: EXPRESS # required for logging
             {{ end }}
             ---
@@ -135,12 +151,6 @@ spec:
             {{ if $stateMachineArn }}
               stateMachineArn: {{ $stateMachineArn }}
             {{ end }}
-              # Status for each resource
-              resourceStatus:
-              {{ range $key, $resource := $.observed.resources }}
-                {{ $key }}:
-                  {{ (getResourceCondition "Ready" $resource) | toYaml | nindent 6 }}
-              {{ end }}
     - step: automatically-detect-ready-composed-resources
       functionRef:
         name: crossplane-contrib-function-auto-ready

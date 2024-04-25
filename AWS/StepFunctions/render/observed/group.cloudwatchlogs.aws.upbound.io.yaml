@@ -3,38 +3,42 @@ kind: Group
 metadata:
   annotations:
     crossplane.io/composition-resource-name: cloudwatch-log-group
-    crossplane.io/external-create-pending: "2024-04-20T00:01:30Z"
-    crossplane.io/external-create-succeeded: "2024-04-20T00:01:30Z"
-    crossplane.io/external-name: statemachine-wdlfm
-  creationTimestamp: "2024-04-20T00:01:29Z"
+    crossplane.io/external-create-pending: "2024-04-25T20:18:37Z"
+    crossplane.io/external-create-succeeded: "2024-04-25T20:18:37Z"
+    crossplane.io/external-name: hello-world-2hns2
+  creationTimestamp: "2024-04-25T20:18:35Z"
   finalizers:
   - finalizer.managedresource.crossplane.io
-  generateName: statemachine-
+  generateName: hello-world-
   generation: 3
   labels:
+    app.example.com/costCenter: "12345"
+    app.example.com/usage: dev
     crossplane.io/claim-name: ""
     crossplane.io/claim-namespace: ""
-    crossplane.io/composite: statemachine
-  name: statemachine-wdlfm
+    crossplane.io/composite: hello-world
+  name: hello-world-2hns2
   ownerReferences:
   - apiVersion: sfn.aws.example.com/v1alpha1
     blockOwnerDeletion: true
     controller: true
     kind: XStateMachine
-    name: statemachine
-    uid: d2602a99-db80-4568-bddb-9dddf891467f
-  resourceVersion: "737225"
-  uid: 7bc8b3d6-131d-4816-9eb5-58fa5febdc8e
+    name: hello-world
+    uid: 45eb138c-7a8c-4108-991c-728a4b9aff82
+  resourceVersion: "88503"
+  uid: 8a9f1809-21e9-4ec6-be45-c3290fa6ae1a
 spec:
   deletionPolicy: Delete
   forProvider:
     logGroupClass: STANDARD
     region: us-west-1
-    retentionInDays: 0
+    retentionInDays: 7
     tags:
       crossplane-kind: group.cloudwatchlogs.aws.upbound.io
-      crossplane-name: statemachine-wdlfm
+      crossplane-name: hello-world-2hns2
       crossplane-providerconfig: default
+      env: dev
+      kind: crossplane-example
   initProvider: {}
   managementPolicies:
   - '*'
@@ -42,30 +46,34 @@ spec:
     name: default
 status:
   atProvider:
-    arn: arn:aws:logs:us-west-1:1234567890:log-group:statemachine-wdlfm
-    id: statemachine-wdlfm
+    arn: arn:aws:logs:us-west-1:609897127049:log-group:hello-world-2hns2
+    id: hello-world-2hns2
     kmsKeyId: ""
     logGroupClass: STANDARD
-    retentionInDays: 0
+    retentionInDays: 7
     skipDestroy: false
     tags:
       crossplane-kind: group.cloudwatchlogs.aws.upbound.io
-      crossplane-name: statemachine-wdlfm
+      crossplane-name: hello-world-2hns2
       crossplane-providerconfig: default
+      env: dev
+      kind: crossplane-example
     tagsAll:
       crossplane-kind: group.cloudwatchlogs.aws.upbound.io
-      crossplane-name: statemachine-wdlfm
+      crossplane-name: hello-world-2hns2
       crossplane-providerconfig: default
+      env: dev
+      kind: crossplane-example
   conditions:
-  - lastTransitionTime: "2024-04-20T00:01:31Z"
+  - lastTransitionTime: "2024-04-25T20:18:38Z"
     reason: Available
     status: "True"
     type: Ready
-  - lastTransitionTime: "2024-04-20T00:01:30Z"
+  - lastTransitionTime: "2024-04-25T20:18:37Z"
     reason: ReconcileSuccess
     status: "True"
     type: Synced
-  - lastTransitionTime: "2024-04-20T00:01:30Z"
+  - lastTransitionTime: "2024-04-25T20:18:37Z"
     reason: Success
     status: "True"
     type: LastAsyncOperation

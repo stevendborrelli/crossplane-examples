@@ -3,28 +3,30 @@ kind: Role
 metadata:
   annotations:
     crossplane.io/composition-resource-name: statemachine-role
-    crossplane.io/external-create-pending: "2024-04-21T15:45:42Z"
-    crossplane.io/external-create-succeeded: "2024-04-21T15:45:42Z"
-    crossplane.io/external-name: hello-world-vr4n5
-  creationTimestamp: "2024-04-21T15:45:41Z"
+    crossplane.io/external-create-pending: "2024-04-25T20:18:37Z"
+    crossplane.io/external-create-succeeded: "2024-04-25T20:18:37Z"
+    crossplane.io/external-name: hello-world-8q9mk
+  creationTimestamp: "2024-04-25T20:18:35Z"
   finalizers:
   - finalizer.managedresource.crossplane.io
   generateName: hello-world-
   generation: 3
   labels:
+    app.example.com/costCenter: "12345"
+    app.example.com/usage: dev
     crossplane.io/claim-name: ""
     crossplane.io/claim-namespace: ""
     crossplane.io/composite: hello-world
-  name: hello-world-vr4n5
+  name: hello-world-8q9mk
   ownerReferences:
   - apiVersion: sfn.aws.example.com/v1alpha1
     blockOwnerDeletion: true
     controller: true
     kind: XStateMachine
     name: hello-world
-    uid: d869e3ba-ff10-4ca0-88e1-fbe0ade15e24
-  resourceVersion: "793056"
-  uid: c71d05f3-3985-4e39-bb4b-f733ed738d2c
+    uid: 45eb138c-7a8c-4108-991c-728a4b9aff82
+  resourceVersion: "88506"
+  uid: 3652d8e1-7914-4d03-934c-48bafde77665
 spec:
   deletionPolicy: Delete
   forProvider:
@@ -43,18 +45,45 @@ spec:
       }
     inlinePolicy:
     - name: sfn-cloudwatchlogs
-      policy: "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\":
-        \"Allow\",\n      \"Action\": [\n        \"logs:CreateLogDelivery\",\n            \"logs:GetLogDelivery\",\n
-        \       \"logs:UpdateLogDelivery\",\n        \"logs:DeleteLogDelivery\",\n
-        \       \"logs:ListLogDeliveries\",\n        \"logs:PutResourcePolicy\",\n
-        \       \"logs:DescribeResourcePolicies\",\n          \"logs:DescribeLogGroups\"\n
-        \     ],\n      \"Resource\": \"*\"\n    }\n  ]\n} \n"
+      policy: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogDelivery",
+                    "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                  "logs:DescribeLogGroups"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                  "xray:PutTraceSegments",
+                  "xray:PutTelemetryRecords",
+                  "xray:GetSamplingRules",
+                  "xray:GetSamplingTargets"
+              ],
+              "Resource": [
+                  "*"
+              ]
+            }]
+        }
     maxSessionDuration: 3600
     path: /
     tags:
       crossplane-kind: role.iam.aws.upbound.io
-      crossplane-name: hello-world-vr4n5
+      crossplane-name: hello-world-8q9mk
       crossplane-providerconfig: default
+      env: dev
+      kind: crossplane-example
   initProvider: {}
   managementPolicies:
   - '*'
@@ -62,42 +91,71 @@ spec:
     name: default
 status:
   atProvider:
-    arn: arn:aws:iam::1234567890:role/hello-world-vr4n5
+    arn: arn:aws:iam::609897127049:role/hello-world-8q9mk
     assumeRolePolicy: '{"Statement":[{"Action":"sts:AssumeRole","Effect":"Allow","Principal":{"Service":"states.amazonaws.com"}}],"Version":"2012-10-17"}'
-    createDate: "2024-04-21T15:45:42Z"
+    createDate: "2024-04-25T20:18:37Z"
     description: ""
     forceDetachPolicies: false
-    id: hello-world-vr4n5
+    id: hello-world-8q9mk
     inlinePolicy:
     - name: sfn-cloudwatchlogs
-      policy: "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\":
-        \"Allow\",\n      \"Action\": [\n        \"logs:CreateLogDelivery\",\n            \"logs:GetLogDelivery\",\n
-        \       \"logs:UpdateLogDelivery\",\n        \"logs:DeleteLogDelivery\",\n
-        \       \"logs:ListLogDeliveries\",\n        \"logs:PutResourcePolicy\",\n
-        \       \"logs:DescribeResourcePolicies\",\n          \"logs:DescribeLogGroups\"\n
-        \     ],\n      \"Resource\": \"*\"\n    }\n  ]\n} \n"
+      policy: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogDelivery",
+                    "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                  "logs:DescribeLogGroups"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                  "xray:PutTraceSegments",
+                  "xray:PutTelemetryRecords",
+                  "xray:GetSamplingRules",
+                  "xray:GetSamplingTargets"
+              ],
+              "Resource": [
+                  "*"
+              ]
+            }]
+        }
     maxSessionDuration: 3600
     path: /
     permissionsBoundary: ""
     tags:
       crossplane-kind: role.iam.aws.upbound.io
-      crossplane-name: hello-world-vr4n5
+      crossplane-name: hello-world-8q9mk
       crossplane-providerconfig: default
+      env: dev
+      kind: crossplane-example
     tagsAll:
       crossplane-kind: role.iam.aws.upbound.io
-      crossplane-name: hello-world-vr4n5
+      crossplane-name: hello-world-8q9mk
       crossplane-providerconfig: default
-    uniqueId: AROAY4AFTTSE3NATDQ2WC
+      env: dev
+      kind: crossplane-example
+    uniqueId: AROAY4AFTTSE27IILRJL4
   conditions:
-  - lastTransitionTime: "2024-04-21T15:45:44Z"
+  - lastTransitionTime: "2024-04-25T20:18:39Z"
     reason: Available
     status: "True"
     type: Ready
-  - lastTransitionTime: "2024-04-21T15:45:42Z"
+  - lastTransitionTime: "2024-04-25T20:18:37Z"
     reason: ReconcileSuccess
     status: "True"
     type: Synced
-  - lastTransitionTime: "2024-04-21T15:45:42Z"
+  - lastTransitionTime: "2024-04-25T20:18:37Z"
     reason: Success
     status: "True"
     type: LastAsyncOperation
