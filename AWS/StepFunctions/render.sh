@@ -1,1 +1,1 @@
-crossplane beta render -r examples/helloworld.yaml apis/composition.yaml functions.yaml -o render/observed
+crossplane beta render -r examples/statemachine.yaml apis/composition.yaml functions.yaml -o render/observed
